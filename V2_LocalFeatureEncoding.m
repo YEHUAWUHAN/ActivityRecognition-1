@@ -1,17 +1,15 @@
-function des = V2_LocalFeatureEncoding(stip_data,codebook_poselet,...
-    codebook_stip,mu_poselet,mu_stip,sigma_poselet,sigma_stip,option)
+function des = V2_LocalFeatureEncoding(stip_data,eval_res,option)
 
 N = length(stip_data);
 stip_data = temporal_reorder(stip_data);
 des = {};
-for i = 1:N
-    
-    
-    des{i}.video = stip_data{i}.video;
-    des{i}.features = feature_encoding_once(codebook_poselet,codebook_stip...
-        ,stip_data{i},mu_poselet,sigma_poselet,mu_stip,sigma_stip,option);
-end
 
+for i = 1:N    
+    des{i}.video = stip_data{i}.video;
+    [des{i}.feature, des{i}.visible] =...
+        feature_encoding_once(stip_data{i},eval_res,option);
+    
+end
 
 end
 
@@ -30,32 +28,140 @@ end
 
 
 
+function [des,vis] = feature_encoding_once(src,eval_res,option)
 
-
-function des = feature_encoding_once(cb_p,cb_s,src,mu_p,sigma_p,mu_s,sigma_s,option)
-
-if option.stip_features.including_scale
+if option.features.stip.including_scale
     dd = 8;
 else
     dd = 10;
 end
-F = option.poselet.subsampling_factor;
-W = option.stip_features.time_window/F;
-S = option.stip_features.stride/F;
-N = size(src.poselet_occurrence,1);
+
+W = option.features.time_window;
+S = option.features.stride;
+N = size(src.skeleton.HeadLeftArm,1); % #frames
 des = [];
-for ii = 1:S:N-W
-   
-    dd_p = feature_encoding_snippet(src.poselet_occurrence(ii:ii+W),...
-        cb_p,mu_p,sigma_p,option);
-    ts = src.features(:,7);
-    
-    interval = find( ts>=(ii-1)*F && ts<=(ii-1+W)*F );
-    dd_s = feature_encoding_snippet(src.features(interval,dd:end),...
-        cb_s,mu_s,sigma_s,option);
-    des = [des;[dd_p dd_s]];
+vis = [];
+alpha = option.features.pose_stip_weight;
+
+%%% read out dictionaries 
+cb_stip = eval_res.CodebookLearning.codebook_stip;
+cb_hra = eval_res.CodebookLearning.codebook_hra;
+cb_hla = eval_res.CodebookLearning.codebook_hla;
+
+mu_stip = eval_res.RawFeatureStandardization.mu_stip;
+mu_hra = eval_res.RawFeatureStandardization.mu_hra;
+mu_hla = eval_res.RawFeatureStandardization.mu_hla;
+
+sigma_stip = eval_res.RawFeatureStandardization.sigma_stip;
+sigma_hra = eval_res.RawFeatureStandardization.sigma_hra;
+sigma_hla = eval_res.RawFeatureStandardization.sigma_hla;
+
+if option.features.skeleton.fullbody
+    cb_trl = eval_res.CodebookLearning.codebook_trl;
+    cb_tll = eval_res.CodebookLearning.codebook_tll;
+    mu_trl = eval_res.RawFeatureStandardization.mu_trl;
+    mu_tll = eval_res.RawFeatureStandardization.mu_tll;
+    sigma_trl = eval_res.RawFeatureStandardization.sigma_trl;
+    sigma_tll = eval_res.RawFeatureStandardization.sigma_tll;
 end
+
+
+if strcmp(option.features.type,'batch')
+
+    dd_hra=feature_encoding_snippet(src.skeleton.HeadRightArm,...
+        cb_hra,mu_hra,sigma_hra,option);
+    dd_hla=feature_encoding_snippet(src.skeleton.HeadLeftArm,...
+        cb_hla,mu_hla,sigma_hla,option);
+    if option.features.skeleton.fullbody
+        dd_trl=feature_encoding_snippet(src.skeleton.TorsoRightLeg,...
+            cb_trl,mu_trl,sigma_trl,option);
+        dd_tll=feature_encoding_snippet(src.skeleton.TorsoLeftLeg,...
+            cb_tll,mu_tll,sigma_tll,option);
+    else
+        dd_trl = [];
+        dd_tll = [];
+    end
     
+    %%% encode stip features inbetween
+    
+    dd_s = feature_encoding_snippet(src.features(:,dd:end),...
+        cb_stip,mu_stip,sigma_stip,option);
+    des = [des;[alpha*dd_hra alpha*dd_hla alpha*dd_trl alpha*dd_tll (1-alpha)*dd_s]];
+    vis = [vis;1];
+
+else
+    
+    for ii = 1:S:N-W   
+        %%% encode pose features
+        if strcmp(option.features.type,'accumulated')
+            p = 1;
+        else
+            p = ii;
+        end
+        
+        if ii+S > N-W
+            dd_hra=feature_encoding_snippet(src.skeleton.HeadRightArm,...
+                cb_hra,mu_hra,sigma_hra,option);
+            dd_hla=feature_encoding_snippet(src.skeleton.HeadLeftArm,...
+                cb_hla,mu_hla,sigma_hla,option);
+            if option.features.skeleton.fullbody
+                dd_trl=feature_encoding_snippet(src.skeleton.TorsoRightLeg,...
+                    cb_trl,mu_trl,sigma_trl,option);
+                dd_tll=feature_encoding_snippet(src.skeleton.TorsoLeftLeg,...
+                    cb_tll,mu_tll,sigma_tll,option);
+            else
+                dd_trl = [];
+                dd_tll = [];
+            end
+
+            %%% encode stip features inbetween
+
+            dd_s = feature_encoding_snippet(src.features(:,dd:end),...
+                cb_stip,mu_stip,sigma_stip,option);
+            des = [des;[alpha*dd_hra alpha*dd_hla alpha*dd_trl alpha*dd_tll (1-alpha)*dd_s]];
+            vis = [vis;1];
+        else
+
+            dd_hra=feature_encoding_snippet(src.skeleton.HeadRightArm(p:ii+W,:),...
+                cb_hra,mu_hra,sigma_hra,option);
+            dd_hla=feature_encoding_snippet(src.skeleton.HeadLeftArm(p:ii+W,:),...
+                cb_hla,mu_hla,sigma_hla,option);
+            if option.features.skeleton.fullbody
+                dd_trl=feature_encoding_snippet(src.skeleton.TorsoRightLeg(p:ii+W,:),...
+                    cb_trl,mu_trl,sigma_trl,option);
+                dd_tll=feature_encoding_snippet(src.skeleton.TorsoLeftLeg(p:ii+W,:),...
+                    cb_tll,mu_tll,sigma_tll,option);
+            else
+                dd_trl = [];
+                dd_tll = [];
+            end
+
+            %%% encode stip features inbetween
+            ts = src.features(:,7);
+            interval = find( ts>=(p-1) & ts<=(ii-1+W) );
+            dd_s = feature_encoding_snippet(src.features(interval,dd:end),...
+                cb_stip,mu_stip,sigma_stip,option);
+            des = [des;[alpha*dd_hra alpha*dd_hla alpha*dd_trl alpha*dd_tll (1-alpha)*dd_s]];
+
+            if option.features.skeleton.fullbody
+                if sum(sum(src.skeleton.HeadRightArm(ii:ii+W,:)))==0 || sum(sum(src.skeleton.HeadLeftArm(ii:ii+W,:)))==0 ...
+                    || sum(sum(src.skeleton.TorsoRightLeg(ii:ii+W,:)))==0 || sum(sum(src.skeleton.TorsoLeftLeg(ii:ii+W,:)))==0
+                    vis = [vis; 0];
+                else
+                    vis = [vis; 1];
+                end
+            else
+                if sum(sum(src.skeleton.HeadRightArm(ii:ii+W,:)))==0 || sum(sum(src.skeleton.HeadLeftArm(ii:ii+W,:)))==0 
+                    vis = [vis; 0];
+                else
+                    vis = [vis; 1];
+                end 
+            end
+        end
+        
+    end
+end    
+%%% l-1 normalization
 des = des./repmat(sum(des,2),1,size(des,2));
 
 end
@@ -67,6 +173,11 @@ function des = feature_encoding_snippet(src,codebook,mu,sigma,option)
 codebook = (full(codebook))';
 method = option.codebook.encoding_method;
 
+%%% when no person in the scene, occurrence histogram is a zero vector
+if isempty(src)
+    des = zeros(1,size(codebook,1));
+    return;
+end
 %%% standardization
 src = (src-repmat(mu,size(src,1),1))./repmat(sigma,size(src,1),1);
 dist = pdist2(src,codebook); % the default distance is euclidean
@@ -75,7 +186,7 @@ switch method
 case 'hard_voting'
   [val,idx] = min(dist,[],2);
   val_t = repmat(val,1,size(dist,2));
-  des = (val_t==dist); 
+  des = sum(val_t==dist,1); 
 
 case 'soft_voting'
  beta = -1;
