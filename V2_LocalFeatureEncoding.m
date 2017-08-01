@@ -170,34 +170,47 @@ end
 
 function des = feature_encoding_snippet(src,codebook,mu,sigma,option)
 
-codebook = (full(codebook))';
-method = option.codebook.encoding_method;
+if strcmp(option.codebook.type, 'Kmeans')
+    codebook = (full(codebook))';
+    method = option.codebook.encoding_method;
 
-%%% when no person in the scene, occurrence histogram is a zero vector
-if isempty(src)
-    des = zeros(1,size(codebook,1));
-    return;
+    %%% when no person in the scene, occurrence histogram is a zero vector
+    if isempty(src)
+        des = zeros(1,size(codebook,1));
+        return;
+    end
+    %%% standardization
+    src = (src-repmat(mu,size(src,1),1))./repmat(sigma,size(src,1),1);
+    dist = pdist2(src,codebook); % the default distance is euclidean
+
+    switch method
+    case 'hard_voting'
+      [val,idx] = min(dist,[],2);
+      val_t = repmat(val,1,size(dist,2));
+      des = sum(val_t==dist,1); 
+
+    case 'soft_voting'
+     beta = -1;
+     val = exp(-beta .* dist);
+     des = val./repmat(sum(val,2),1,size(val,2));
+
+    otherwise
+     disp('error: no other option.');
+
+    end
+    
+elseif strcmp(option.codebook.type, 'GMM')
+    %%% todo Fisher vector encoding
+    des = vl_fisher(src',codebook.means, codebook.covariance, codebook.priors);
+    des = des';
+    
+else
+    fprintf('ERROR: select codebook type Kmeans or GMM!\n');
 end
-%%% standardization
-src = (src-repmat(mu,size(src,1),1))./repmat(sigma,size(src,1),1);
-dist = pdist2(src,codebook); % the default distance is euclidean
 
-switch method
-case 'hard_voting'
-  [val,idx] = min(dist,[],2);
-  val_t = repmat(val,1,size(dist,2));
-  des = sum(val_t==dist,1); 
-
-case 'soft_voting'
- beta = -1;
- val = exp(-beta .* dist);
- des = val./repmat(sum(val,2),1,size(val,2));
-
-otherwise
- disp('error: no other option.');
-
-end
 des = des./sum(des);
+
+
 end
 
 

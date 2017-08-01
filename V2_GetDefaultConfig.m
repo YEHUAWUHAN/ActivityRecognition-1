@@ -67,10 +67,11 @@ option.fileIO.option_file = sprintf('%s_option_%s.mat',dataset,timer);
 
 %% codebook generation
 option.codebook.maxsamples = 100000; %%% uplimit of samples for clustering.
-option.codebook.NC_stip = 4000; %%% number of clusters to obtain
-option.codebook.NC_pose = 50; %%% number of clusters to obtain
+option.codebook.NC_stip = 256; %%% number of clusters to obtain
+option.codebook.NC_pose = 10; %%% number of clusters to obtain
 option.codebook.encoding_method = 'hard_voting';
 option.codebook.visualize = 0;
+option.codebook.type = 'GMM';
 %% svm classification
 option.svm.kernel = 'chi-square'; %%% svm kernel, can be linear, RBF or chi-square
 option.svm.n_fold_cv = 5; %%% n-fode cross-validation for parameter selection

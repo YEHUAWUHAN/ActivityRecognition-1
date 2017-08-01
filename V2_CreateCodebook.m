@@ -122,20 +122,32 @@ if option.codebook.visualize
 end
 
 
-%%% kmeans clustering with kmeans++ initialization and optimized algorithm.
-%%% here we use the fcl lib for fast clustering. Initialization is kmeans++, and we dont run several times. 
-opts.seed = 0;                  % change starting position of clustering
-opts.algorithm = 'kmeans_optimized';     % change the algorithm to 'kmeans_optimized'
-opts.init = 'kmeans++';           % use kmeans++ as initialization
-opts.no_cores = 7;              % number of cores to use. for scientific experiments always use 1! -1 means using all
-opts.max_iter = 100;             % stop after 100 iterations
-opts.tol = 1e-5;                % change the tolerance to converge quicker
-opts.silent = true;             % do not output anything while clustering
-opts.remove_empty = true;       % remove empty clusters from resulting cluster center matrix
-opts.additional_params.bv_annz = 0.125;
-fprintf('-- clustering (optimized kmeans)....\n');
-[ IDX, codebook,SUMD,running_info ] = fcl_kmeans(sparse(features'), NC, opts);
 
+if strcmp(option.codebook.type, 'Kmeans')
+
+    %%% kmeans clustering with kmeans++ initialization and optimized algorithm.
+    %%% here we use the fcl lib for fast clustering. Initialization is kmeans++, and we dont run several times. 
+    opts.seed = 0;                  % change starting position of clustering
+    opts.algorithm = 'kmeans_optimized';     % change the algorithm to 'kmeans_optimized'
+    opts.init = 'kmeans++';           % use kmeans++ as initialization
+    opts.no_cores = 7;              % number of cores to use. for scientific experiments always use 1! -1 means using all
+    opts.max_iter = 100;             % stop after 100 iterations
+    opts.tol = 1e-5;                % change the tolerance to converge quicker
+    opts.silent = true;             % do not output anything while clustering
+    opts.remove_empty = true;       % remove empty clusters from resulting cluster center matrix
+    opts.additional_params.bv_annz = 0.125;
+    fprintf('-- clustering (optimized kmeans)....\n');
+    [ IDX, codebook,SUMD,running_info ] = fcl_kmeans(sparse(features'), NC, opts);
+
+elseif strcmp(option.codebook.type, 'GMM')
+    %%todo
+    [codebook.means, codebook.covariance, codebook.priors] = ...
+        vl_gmm(features', NC);
+        
+else
+    fprintf('ERROR: select codebook type Kmeans or GMM!\n');
+end
+    
 clear features stip_data
 
 
