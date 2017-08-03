@@ -1,7 +1,9 @@
 clear;
 clc
-load('KTH_EvaluationResults_2017-04-05-11-20.mat');
-load('KTH_option_2017-04-05-11-20.mat');
+% load('KTH_EvaluationResults_2017-04-05-11-20.mat');
+% load('KTH_option_2017-04-05-11-20.mat');
+load('KTH_EvaluationResults_2017-08-02-16-41.mat');
+load('KTH_option_2017-08-02-16-41.mat');
 
 rate = [];
 for aa = 0:10

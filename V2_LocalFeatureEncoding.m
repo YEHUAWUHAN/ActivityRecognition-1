@@ -162,7 +162,9 @@ else
     end
 end    
 %%% l-1 normalization
-des = des./repmat(sum(des,2),1,size(des,2));
+if strcmp(option.codebook.type, 'Kmeans')
+    des = des./repmat(sum(des,2),1,size(des,2));
+end
 
 end
 
@@ -188,27 +190,37 @@ if strcmp(option.codebook.type, 'Kmeans')
       [val,idx] = min(dist,[],2);
       val_t = repmat(val,1,size(dist,2));
       des = sum(val_t==dist,1); 
-
+      des = des./sum(des);
     case 'soft_voting'
-     beta = -1;
-     val = exp(-beta .* dist);
-     des = val./repmat(sum(val,2),1,size(val,2));
+      beta = -1;
+      val = exp(-beta .* dist);
+      des = val./repmat(sum(val,2),1,size(val,2));
 
+    case 'VLAD'
+      kdtree = vl_kdtreebuild(codebook') ;
+      nn = vl_kdtreequery(kdtree, codebook', src');
+      assignments = zeros(size(codebook,1),size(src,1));
+      assignments(sub2ind(size(assignments), nn, 1:length(nn))) = 1;
+      des = vl_vlad(src',codebook',assignments,'SquareRoot','NormalizeMass');
+      des = des';
     otherwise
      disp('error: no other option.');
 
     end
     
+    
+
+    
 elseif strcmp(option.codebook.type, 'GMM')
     %%% todo Fisher vector encoding
-    des = vl_fisher(src',codebook.means, codebook.covariance, codebook.priors);
+    des = vl_fisher(src',codebook.means, codebook.covariance, codebook.priors, 'Improved');
     des = des';
+    
     
 else
     fprintf('ERROR: select codebook type Kmeans or GMM!\n');
 end
 
-des = des./sum(des);
 
 
 end

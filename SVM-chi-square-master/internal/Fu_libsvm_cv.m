@@ -74,12 +74,12 @@ end
 c=1;g=1;
 
 if(opts.cvGamma)
-    llog2g = -5:3;
+    llog2g = -5:7;
 else
     llog2g = 0;
 end
 if(opts.cvSlack)
-    llog2c = 1:7;
+    llog2c = -5:7;
 else
     llog2c = 0;
 end
@@ -93,6 +93,7 @@ end
 cv_all = zeros(6,6);
 aac_all = zeros(6,6);
 i=1;
+
 for log2c = llog2c
     j=1;
     for log2g = llog2g

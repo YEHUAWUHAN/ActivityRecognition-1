@@ -89,8 +89,8 @@ for aa = weightCandidates
     clear stip_S_encoded stip_T_encoded
 end
 
-save(option.fileIO.eval_res_file,'eval_res');
-save(option.fileIO.option_file,'option');
+save(option.fileIO.eval_res_file,'eval_res','-v7.3');
+save(option.fileIO.option_file,'option','-v7.3');
 
 %% Rochester ADL dataset
 % clear all;

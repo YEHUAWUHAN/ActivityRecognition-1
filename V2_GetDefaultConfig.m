@@ -13,13 +13,14 @@ option.features.stip.including_scale = 1;
 option.features.time_window = 30; % successive frames wrt.subsampling
 option.features.stride = 30; % sliding time window by this stride
 option.features.pose_stip_weight = 1; % feature =( w*posefeature, (1-w)*stipfeature)
-option.features.standardization = 1;
+option.features.standardization = 1; % 1 for kmeans
 option.voting.excluding_empty_detection = true;
 
 % 'batch':one feature per video; 
 % 'accumulated':features accumulated over each snippets
 % 'snippets': features are from each individual snippets
-option.features.type = 'accumulated';
+option.features.type = 'batch';
+% option.features.type = 'accumulated';
 
 % %% hyperfeatures architecture
 % % option.hyperfeatures.use_trained_codebook = 1;
@@ -67,13 +68,17 @@ option.fileIO.option_file = sprintf('%s_option_%s.mat',dataset,timer);
 
 %% codebook generation
 option.codebook.maxsamples = 100000; %%% uplimit of samples for clustering.
-option.codebook.NC_stip = 256; %%% number of clusters to obtain
-option.codebook.NC_pose = 10; %%% number of clusters to obtain
-option.codebook.encoding_method = 'hard_voting';
+option.codebook.NC_stip = 4000; %%% number of clusters to obtain 4000-Kmeans
+option.codebook.NC_pose = 50; %%% number of clusters to obtain 50-Kmeans
+option.codebook.encoding_method = 'hard_voting'; %%% 'VLAD', 'Fisher','hard_voting'
 option.codebook.visualize = 0;
-option.codebook.type = 'GMM';
+
+option.codebook.type = 'Kmeans'; %%% Fisher vector 
+if strcmp(option.codebook.encoding_method, 'Fisher')
+    option.codebook.type = 'GMM'; %%% Fisher vector 
+end
 %% svm classification
-option.svm.kernel = 'chi-square'; %%% svm kernel, can be linear, RBF or chi-square
+option.svm.kernel = 'linear'; %%% svm kernel, can be linear, RBF or chi-square
 option.svm.n_fold_cv = 5; %%% n-fode cross-validation for parameter selection
 option.svm.useWeight = true;
 

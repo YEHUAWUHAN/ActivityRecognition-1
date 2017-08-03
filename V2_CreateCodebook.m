@@ -140,10 +140,44 @@ if strcmp(option.codebook.type, 'Kmeans')
     [ IDX, codebook,SUMD,running_info ] = fcl_kmeans(sparse(features'), NC, opts);
 
 elseif strcmp(option.codebook.type, 'GMM')
-    %%todo
+    features = features';
+    %%% initialize using kmeans
+    fprintf('-- clustering (Gaussian Mixture Model)....\n');
+    fprintf('--- clustering (Gaussian Mixture Model) init....\n');
+    
+    opts.seed = 0;                  % change starting position of clustering
+    opts.algorithm = 'kmeans_optimized';     % change the algorithm to 'kmeans_optimized'
+    opts.init = 'kmeans++';           % use kmeans++ as initialization
+    opts.no_cores = 7;              % number of cores to use. for scientific experiments always use 1! -1 means using all
+    opts.max_iter = 100;             % stop after 100 iterations
+    opts.tol = 1e-5;                % change the tolerance to converge quicker
+    opts.silent = true;             % do not output anything while clustering
+    opts.remove_empty = true;       % remove empty clusters from resulting cluster center matrix
+    opts.additional_params.bv_annz = 0.125;
+    [ IDX, init_mean,SUMD,running_info ] = fcl_kmeans(sparse(features), NC, opts);
+    init_cov = zeros(size(features,1), NC);
+    init_prior = zeros(1,NC);
+    IDX = IDX+1;
+    for i=1:NC
+        data_k = features(:,IDX==i);
+        init_prior(i) = size(data_k,2) / NC;
+
+        if size(data_k,1) == 0 || size(data_k,2) == 0
+            init_cov(:,i) = diag(cov(features'));
+        else
+            init_cov(:,i) = diag(cov(data_k'));
+        end
+    end
+    
+    
+    fprintf('--- clustering (Gaussian Mixture Model) EM....\n');
     [codebook.means, codebook.covariance, codebook.priors] = ...
-        vl_gmm(features', NC);
-        
+        vl_gmm(features, NC, 'initialization','custom',...
+        'InitMeans',full(init_mean),'InitCovariances',init_cov,'InitPriors',init_prior);
+    SUMD = [];
+    opts = [];
+    running_info=[];
+
 else
     fprintf('ERROR: select codebook type Kmeans or GMM!\n');
 end

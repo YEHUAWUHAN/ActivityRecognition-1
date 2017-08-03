@@ -4,3 +4,4 @@ exemplarsvm/
 SSDPM_v1-1/
 *.mat
 DenseMBH_Rochester/
+caffe_rtpose-master/SenseEmotion3_Pose_MPI/*
