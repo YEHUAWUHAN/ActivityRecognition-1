@@ -85,6 +85,8 @@ for ii = 1:NNt
         case 'HMDB51'
             label = find(strcmp(act_list, stip_data_test{ii}.video));
             Yt = [Yt;label*ones(n_snippets,1)];
+        case 'SenseEmotion3_Searching'
+            Yt = [Yt;stip_data_train{ii}.label*ones(n_snippets,1)]
         otherwise
             error('no othe option.');
             return;

@@ -7,12 +7,12 @@ if strcmp(dataset,'SenseEmotion3_Searching')
     disp('- read data from file...');
     batches = 1:4;
     feature_data = {};
-    parfor bb = batches
+    parfor (bb = batches,4)
         filename = ...
             sprintf('stip-2.0-linux/%s_left.stip_harris3d.batch%d.txt',...
             option.fileIO.dataset_name, bb);
         feature_data{bb} = ReadSTIPFile(filename,option);
-        feature_data{bb} = V2_SkeletonFeatureExtraction(feature_data{bb});
+        feature_data{bb} = V2_SkeletonFeatureExtraction(feature_data{bb},option);
         label_file = sprintf([option.fileIO.dataset_path,...
             '/VideoFileList_Searching_Left_batch%d_label.txt'],bb);
         labels = importdata(label_file);
@@ -25,7 +25,7 @@ if strcmp(dataset,'SenseEmotion3_Searching')
     disp('- group data into training/testing, each time leave one group out..');
     groups = 1:4;
     for gp = groups
-        outfilename = sprintf('option.fileIO.dataset_name_leave_%i.mat',gp);
+        outfilename = sprintf([option.fileIO.dataset_name,'_leave_%i.mat'],gp);
         groups_training = groups(groups~=gp);
         stip_data_S = {};
         stip_data_T = {};
