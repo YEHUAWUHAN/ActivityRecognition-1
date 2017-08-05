@@ -8,7 +8,9 @@ for i = 1:N
     des{i}.video = stip_data{i}.video;
     [des{i}.feature, des{i}.visible] =...
         feature_encoding_once(stip_data{i},eval_res,option);
-    
+    if strcmp(option.fileIO.dataset_name, 'SenseEmotion3_Searching')
+        des{i}.label = stip_data{i}.label;
+    end
 end
 
 end
