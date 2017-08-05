@@ -5,6 +5,8 @@ switch dataset
         option.features.skeleton.fullbody = true;
     case 'RochesterADL'
         option.features.skeleton.fullbody = false;
+    case 'SenseEmotion3_Searching'
+        option.features.skeleton.fullbody = false;
     otherwise
         error('no other dataset considered so far.');
         return;
@@ -47,6 +49,9 @@ switch dataset
         option.fileIO.stip_file_version = '2.0'; 
     case 'KTH'
         act_list = {'boxing','handclapping','handwaving','jogging','running','walking'};
+        option.fileIO.stip_file_version = '2.0'; 
+    case 'SenseEmotion3_Searching'
+        act_list = {'regular', 'irregular1', 'irregular2'};
         option.fileIO.stip_file_version = '2.0'; 
     case 'HMDB51'
         dataset_path = option.fileIO.dataset_path;

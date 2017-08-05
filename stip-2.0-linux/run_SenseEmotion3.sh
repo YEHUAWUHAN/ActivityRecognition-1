@@ -9,8 +9,7 @@
 
 
 echo ==========================================================================;
-echo Extrac features of subject "$i";
-    ./bin/stipdet -i ~/Videos/Dataset_SenseEmotion3/Searching/VideoFileList_Searching_Left.txt -vpath ~/Videos/Dataset_SenseEmotion3/Searching/ -o SenseEmotion3_Searching_left.stip_harris3d.txt -det harris3d -vis no;
+    ./bin/stipdet -i ~/Videos/Dataset_SenseEmotion3/Searching/VideoFileList_Searching_Left_"$1".txt -vpath ~/Videos/Dataset_SenseEmotion3/Searching/ -o SenseEmotion3_Searching_left.stip_harris3d."$1".txt -det harris3d -vis no;
 
 
 #echo Copy Files;
