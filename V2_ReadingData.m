@@ -13,6 +13,12 @@ if strcmp(dataset,'SenseEmotion3_Searching')
             option.fileIO.dataset_name, bb);
         feature_data{bb} = ReadSTIPFile(filename,option);
         feature_data{bb} = V2_SkeletonFeatureExtraction(feature_data{bb});
+        label_file = sprintf([option.fileIO.dataset_path,...
+            '/VideoFileList_Searching_Left_batch%d_label.txt'],bb);
+        labels = importdata(label_file);
+        for i = 1:length(feature_data{bb})
+            feature_data{bb}{i}.label = labels(i);
+        end
     end
     
     %%% group data into training/testing, each time leave one group out
