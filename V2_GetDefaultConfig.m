@@ -3,10 +3,13 @@ function option = V2_GetDefaultConfig(dataset)
 switch dataset
     case 'KTH'
         option.features.skeleton.fullbody = true;
+        option.features.stip.type = 'STIP';
     case 'RochesterADL'
+        option.features.stip.type = 'STIP';
         option.features.skeleton.fullbody = false;
     case 'SenseEmotion3_Searching'
         option.features.skeleton.fullbody = false;
+        option.features.stip.type = 'iDT';
     otherwise
         error('no other dataset considered so far.');
         return;

@@ -7,7 +7,7 @@
 
 using namespace cv;
 
-int show_track = 1; // set show_track = 1, if you want to visualize the trajectories
+int show_track = 0; // set show_track = 1, if you want to visualize the trajectories
 
 int main(int argc, char** argv)
 {
@@ -59,7 +59,8 @@ int main(int argc, char** argv)
 		capture >> frame;
 		if(frame.empty())
 			break;
-
+                
+                // resize video frame by 0.25
 		cv::resize(frame, frame, Size(), 0.25, 0.25);
 
 

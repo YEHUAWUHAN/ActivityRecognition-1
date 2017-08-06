@@ -8,9 +8,16 @@ if strcmp(dataset,'SenseEmotion3_Searching')
     batches = 1:4;
     feature_data = {};
     parfor bb = batches
-        filename = ...
-            sprintf('stip-2.0-linux/%s_left.stip_harris3d.batch%d.txt',...
-            option.fileIO.dataset_name, bb);
+        video_list = importdata(sprintf([option.fileIO.dataset_path, ...
+            '/VideoFileList_Searching_Left_batch%d.txt'], bb));
+        
+        for ii = 1:length(video_list)
+            filename = ...
+                sprintf([option.fileIO.dataset_path,'/DT_features/DT_%s.txt'],...
+                video_list{ii});
+            
+            
+        
         feature_data{bb} = ReadSTIPFile(filename,option);
         feature_data{bb} = V2_SkeletonFeatureExtraction(feature_data{bb});
         label_file = sprintf([option.fileIO.dataset_path,...
