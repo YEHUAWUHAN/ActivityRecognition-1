@@ -13,14 +13,14 @@ test_labels = {};
 
 for ii = 1:NN  
     n_snippets = size(stip_data_train{ii}.feature,1);
-    vis = stip_data_train{ii}.visible;
-    if option.voting.excluding_empty_detection
-        idx = find(vis==1);
-        n_snippets = length(idx);
-    else
-        idx = 1:n_snippets;
-    end
-    
+    %vis = stip_data_train{ii}.visible;
+    %if option.voting.excluding_empty_detection
+    %    idx = find(vis==1);
+    %    n_snippets = length(idx);
+    %else
+    %    idx = 1:n_snippets;
+    %end
+    idx = 1:n_snippets;
     switch option.fileIO.dataset_name
         case 'RochesterADL'
             label = find(strcmp(act_list, stip_data_train{ii}.video(1:end-4)));
@@ -62,14 +62,14 @@ end
 for ii = 1:NNt
     n_snippets = size(stip_data_test{ii}.feature,1);
     
-    vis = stip_data_test{ii}.visible;
-    if option.voting.excluding_empty_detection
-        idx = find(vis==1);
-        n_snippets = length(idx);
-    else
-        idx = 1:n_snippets;
-    end
-    
+    %vis = stip_data_test{ii}.visible;
+    %if option.voting.excluding_empty_detection
+    %    idx = find(vis==1);
+    %    n_snippets = length(idx);
+    %else
+    %    idx = 1:n_snippets;
+    %end
+    idx = 1:n_snippets;
     switch option.fileIO.dataset_name
         case 'RochesterADL'
             label = find(strcmp(act_list, stip_data_test{ii}.video(1:end-4)));
@@ -85,6 +85,10 @@ for ii = 1:NNt
         case 'HMDB51'
             label = find(strcmp(act_list, stip_data_test{ii}.video));
             Yt = [Yt;label*ones(n_snippets,1)];
+        case 'SenseEmotion3_Searching'
+            label = stip_data_test{ii}.label;
+            Yt = [Yt;label*ones(n_snippets,1)];
+
         otherwise
             error('no othe option.');
             return;
@@ -102,7 +106,7 @@ for ii = 1:NNt
 %         
 %         Xs(ii,:) = last ./ (sum(last)); % l1 -normalizing
 %     end
-    test_labels{ii}.label = act_list(label);
+    test_labels{ii}.label = stip_data_test{ii}.label;
     test_labels{ii}.video = stip_data_test{ii}.video;
     test_labels{ii}.n_snippets = n_snippets;
     stip_data_test{ii} = [];
@@ -110,8 +114,19 @@ for ii = 1:NNt
 end
 
 
-%%% processing data and train linear svm in a multi-class svm and optimize the hyper-parameters
-%%% todo
+%%% re-arrange the labels so as to avoid relabeling issue in libsvm
+[Ys,idx_sort] = sort(Ys, 'descend');
+Xs = Xs(idx_sort,:);
+
+[Yt,idx_sort] = sort(Yt, 'descend');
+Xt = Xt(idx_sort,:);
+
+
+%%% feature PCA dimension reduction
+target_dim = option.svm.pca_whitening_target_dim;
+[Xs,Xt] = pca_dr(Xs,Xt, target_dim);
+
+%%% classification
 fprintf('-- training and testing \n');
 [model,prob_estimates,cls,meta_res] = TrainSVM(Xs,Ys,Xt,Yt,option);
 end
@@ -121,12 +136,62 @@ function [bestmodel,prob_estimates,class_label,meta_res] = TrainSVM(Xs,Ys,Xt,Yt,
 %%% X is a struct containing feature vectors in a context hierarchy.
 %%% Y is the action label.
 
-opt.nFold = option.svm.n_fold_cv; %%% rochester and weizmann, 5-fold cv; KTH 10-foldsave
-opt.kernel = option.svm.kernel;
-opt.useWeight = option.svm.useWeight;
-% Xtrain = CCV_normalize(Xs,1);
-% Xtest = CCV_normalize(Xt,1);
-[acc, prob_estimates, bestmodel, class_label, meta_res]...
-        =Fu_direct_SVM2(Xs, Xt, Ys,Yt,opt);
+% opt.nFold = option.svm.n_fold_cv; %%% rochester and weizmann, 5-fold cv; KTH 10-foldsave
+% opt.kernel = option.svm.kernel;
+% opt.useWeight = option.svm.useWeight;
+% % Xtrain = CCV_normalize(Xs,1);
+% % Xtest = CCV_normalize(Xt,1);
+% [acc, prob_estimates, bestmodel, class_label, meta_res]...
+%         =Fu_direct_SVM2(Xs, Xt, Ys,Yt,opt);
+
+
+
+%%% In the following, we implement our own multi-class classification
+%%% problem, so as to avoid relabeling problem within svm. Here we applied
+%%% the embedded functions in Matlab.
+
+svm_template = templateSVM('KernelFunction', option.svm.kernel);
+rng default;
+Mdl = fitcecoc(Xs,Ys,'Learners',svm_template, 'OptimizeHyperparameters', 'auto',...
+    'HyperparameterOptimizationOptions',...
+    struct('Kfold',option.svm.n_fold_cv, 'ShowPlots',false,'Verbose',0));
+class_label = predict(Mdl,Xt);
+bestmodel = Mdl;
+prob_estimates = [];
+meta_res = [];
+acc_rate = sum(class_label == Yt)/length(Yt);
+fprintf('-- recognition rate = %f\n',acc_rate);
 
 end
+
+
+function [Xs, Xt] = pca_dr(Xs,Xt,target_dim)
+
+[U,Xs,~,~,~,Xs_mean] = pca(Xs,'NumComponents',target_dim, 'Centered','on');
+Xt = (Xt-repmat(Xs_mean,size(Xt,1),1))*U;
+
+
+
+% %%% mean and cov computation
+% Xs_mean = mean(Xs);
+% Xs_cov = cov(Xs);
+% 
+% %%% eigen-decomposition
+% [U_all,D_all] = eig(Xs_cov);
+% U = U_all(:,1:target_dim);
+% D = D_all(1:target_dim,1:target_dim);
+% 
+% %%% whitening
+% Xs = (Xs-repmat(Xs_mean,size(Xs,1),1))*U * D.^(-0.5);
+% Xt = (Xt-repmat(Xs_mean,size(Xt,1),1))*U * D.^(-0.5);
+
+end
+
+
+
+
+
+
+
+
+

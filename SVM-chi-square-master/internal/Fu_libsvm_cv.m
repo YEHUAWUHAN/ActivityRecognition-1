@@ -79,7 +79,7 @@ else
     llog2g = 0;
 end
 if(opts.cvSlack)
-    llog2c = -5:7;
+    llog2c = -15:15;
 else
     llog2c = 0;
 end

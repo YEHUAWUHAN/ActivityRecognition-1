@@ -1,4 +1,4 @@
-function option = V2_GetDefaultConfig(dataset)
+function option = V3_GetDefaultConfig(dataset)
 %% raw features
 switch dataset
     case 'KTH'
@@ -10,15 +10,15 @@ switch dataset
     case 'SenseEmotion3_Searching'
         option.features.skeleton.fullbody = false;
         option.features.stip.type = 'iDT';
+        option.features.stip.scales = 2.^(0:0.5:2.5); % can be automatically determined
+        option.features.stip.feature_type_list = {'var','mbh'}; % var,traj,hog,hof,mbh
     otherwise
         error('no other dataset considered so far.');
         return;
 end
-option.features.stip.including_scale = 1;
 option.features.time_window = 30; % successive frames wrt.subsampling
 option.features.stride = 30; % sliding time window by this stride
-option.features.pose_stip_weight = 1; % feature =( w*posefeature, (1-w)*stipfeature)
-option.features.standardization = 1; % 1 for kmeans
+option.features.standardization = 0; % 1 for kmeans
 option.voting.excluding_empty_detection = true;
 
 % 'batch':one feature per video; 
@@ -76,9 +76,8 @@ option.fileIO.option_file = sprintf('%s_option_%s.mat',dataset,timer);
 
 %% codebook generation
 option.codebook.maxsamples = 100000; %%% uplimit of samples for clustering.
-option.codebook.NC_stip = 4000; %%% number of clusters to obtain 4000-Kmeans
-option.codebook.NC_pose = 50; %%% number of clusters to obtain 50-Kmeans
-option.codebook.encoding_method = 'hard_voting'; %%% 'VLAD', 'Fisher','hard_voting'
+option.codebook.NC_gmm = 64; %%% number of clusters to obtain 4000-Kmeans
+option.codebook.encoding_method = 'Fisher'; %%% 'VLAD', 'Fisher','hard_voting'
 option.codebook.visualize = 0;
 
 option.codebook.type = 'Kmeans'; %%% Fisher vector 
@@ -89,6 +88,5 @@ end
 option.svm.kernel = 'linear'; %%% svm kernel, can be linear, RBF or chi-square
 option.svm.n_fold_cv = 5; %%% n-fode cross-validation for parameter selection
 option.svm.useWeight = true;
-
-
+option.svm.pca_whitening_target_dim = 400;
 
