@@ -38,7 +38,9 @@ option.features.type = 'batch';
 %%% specify the dataset path
 timer = datestr(fix(clock),'yyyy-mm-dd-HH-MM');
 option.fileIO.time = timer;
-option.fileIO.dataset_path = sprintf('~/Videos/Dataset_%s',dataset);
+% option.fileIO.dataset_path = sprintf('~/Videos/Dataset_%s',dataset);
+option.fileIO.dataset_path = sprintf('/mnt/eshare/yzhang/Dataset_%s',dataset);
+
 option.fileIO.dataset_name = dataset;
 
 %%% read the action_list

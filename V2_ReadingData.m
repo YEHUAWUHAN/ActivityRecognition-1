@@ -7,19 +7,13 @@ if strcmp(dataset,'SenseEmotion3_Searching')
     disp('- read data from file...');
     batches = 1:4;
     feature_data = {};
+
     parfor bb = batches
         video_list = importdata(sprintf([option.fileIO.dataset_path, ...
             '/VideoFileList_Searching_Left_batch%d.txt'], bb));
         
-        for ii = 1:length(video_list)
-            filename = ...
-                sprintf([option.fileIO.dataset_path,'/DT_features/DT_%s.txt'],...
-                video_list{ii});
-            
-            
-        
         feature_data{bb} = ReadSTIPFile(filename,option);
-        feature_data{bb} = V2_SkeletonFeatureExtraction(feature_data{bb});
+        feature_data{bb} = V2_SkeletonFeatureExtraction(feature_data{bb},option);
         label_file = sprintf([option.fileIO.dataset_path,...
             '/VideoFileList_Searching_Left_batch%d_label.txt'],bb);
         labels = importdata(label_file);
@@ -32,7 +26,7 @@ if strcmp(dataset,'SenseEmotion3_Searching')
     disp('- group data into training/testing, each time leave one group out..');
     groups = 1:4;
     for gp = groups
-        outfilename = sprintf('option.fileIO.dataset_name_leave_%i.mat',gp);
+        outfilename = sprintf([option.fileIO.dataset_name,'_leave_%i.mat'],gp);
         groups_training = groups(groups~=gp);
         stip_data_S = {};
         stip_data_T = {};
