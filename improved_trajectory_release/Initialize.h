@@ -1,7 +1,7 @@
 #ifndef INITIALIZE_H_
 #define INITIALIZE_H_
 
-#include "DenseTrack.h"
+#include "DenseTrackStab.h"
 
 using namespace cv;
 
@@ -71,8 +71,8 @@ void InitSeqInfo(SeqInfo* seqInfo, char* video)
 
 void usage()
 {
-	fprintf(stderr, "Extract dense trajectories from a video\n\n");
-	fprintf(stderr, "Usage: DenseTrack video_file [options]\n");
+	fprintf(stderr, "Extract improved trajectories from a video\n\n");
+	fprintf(stderr, "Usage: DenseTrackStab video_file [options]\n");
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "  -h                        Display this message and exit\n");
 	fprintf(stderr, "  -S [start frame]          The start frame to compute feature (default: S=0 frame)\n");
@@ -84,6 +84,7 @@ void usage()
 	fprintf(stderr, "  -t [temporal cells]       The number of cells in the nt axis (default: nt=3 cells)\n");
 	fprintf(stderr, "  -A [scale number]         The number of maximal spatial scales (default: 8 scales)\n");
 	fprintf(stderr, "  -I [initial gap]          The gap for re-sampling feature points (default: 1 frame)\n");
+	fprintf(stderr, "  -H [human bounding box]   The human bounding box file to remove outlier matches (default: None)\n");
 }
 
 bool arg_parse(int argc, char** argv)
@@ -91,7 +92,7 @@ bool arg_parse(int argc, char** argv)
 	int c;
 	bool flag = false;
 	char* executable = basename(argv[0]);
-	while((c = getopt (argc, argv, "hS:E:L:W:N:s:t:A:I:")) != -1)
+	while((c = getopt (argc, argv, "hS:E:L:W:N:s:t:A:I:H:")) != -1)
 	switch(c) {
 		case 'S':
 		start_frame = atoi(optarg);
@@ -122,7 +123,9 @@ bool arg_parse(int argc, char** argv)
 		case 'I':
 		init_gap = atoi(optarg);
 		break;	
-
+		case 'H':
+		bb_file = optarg;
+		break;
 		case 'h':
 		usage();
 		exit(0);

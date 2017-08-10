@@ -15,35 +15,31 @@
 
 IplImage* image = 0; 
 IplImage* prev_image = 0;
-//CvCapture* capture = 0;
+CvCapture* capture = 0;
+
 int show = 1; 
 
 int main( int argc, char** argv )
 {
 	int frameNum = 0;
 
-	std::string video = argv[1];
-        std::cout << "opening a video stream" << std::endl;
-	cv::VideoCapture capture(video.c_str());
-	if( !capture.isOpened() ) { 
+	char* video = argv[1];
+	capture = cvCreateFileCapture(video);
+
+	if( !capture ) { 
 		printf( "Could not initialize capturing..\n" );
 		return -1;
 	}
 	
-	if( show == 1 ) {
-                std::cout << "opened a video" <<std::endl;
+	if( show == 1 )
 		cvNamedWindow( "Video", 0 );
-        }
 
 	while( true ) {
-                cv::Mat frame_mat;
-//		IplImage* frame = 0;
+		IplImage* frame = 0;
 		int i, j, c;
 
 		// get a new frame
-                capture >> frame_mat;
-		//frame = cvQueryFrame( capture );
-                IplImage* frame = new IplImage(frame_mat);
+		frame = cvQueryFrame( capture );
 		if( !frame )
 			break;
 
@@ -62,7 +58,6 @@ int main( int argc, char** argv )
 		
 		std::cerr << "The " << frameNum << "-th frame" << std::endl;
 		frameNum++;
-                delete frame;
 	}
 
 	if( show == 1 )

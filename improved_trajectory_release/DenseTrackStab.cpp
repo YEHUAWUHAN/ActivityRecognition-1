@@ -1,4 +1,4 @@
-#include "DenseTrack.h"
+#include "DenseTrackStab.h"
 #include "Initialize.h"
 #include "Descriptors.h"
 #include "OpticalFlow.h"
@@ -7,7 +7,7 @@
 
 using namespace cv;
 
-int show_track = 1; // set show_track = 1, if you want to visualize the trajectories
+int show_track = 0; // set show_track = 1, if you want to visualize the trajectories
 
 int main(int argc, char** argv)
 {
@@ -33,21 +33,38 @@ int main(int argc, char** argv)
 	SeqInfo seqInfo;
 	InitSeqInfo(&seqInfo, video);
 
+	std::vector<Frame> bb_list;
+	if(bb_file) {
+		LoadBoundBox(bb_file, bb_list);
+		assert(bb_list.size() == seqInfo.length);
+	}
+
 	if(flag)
 		seqInfo.length = end_frame - start_frame + 1;
 
 //	fprintf(stderr, "video size, length: %d, width: %d, height: %d\n", seqInfo.length, seqInfo.width, seqInfo.height);
 
 	if(show_track == 1)
-		cv::namedWindow("DenseTrack", WINDOW_NORMAL);
+		namedWindow("DenseTrackStab", 0);
+
+	SurfFeatureDetector detector_surf(200);
+	SurfDescriptorExtractor extractor_surf(true, true);
+
+	std::vector<Point2f> prev_pts_flow, pts_flow;
+	std::vector<Point2f> prev_pts_surf, pts_surf;
+	std::vector<Point2f> prev_pts_all, pts_all;
+
+	std::vector<KeyPoint> prev_kpts_surf, kpts_surf;
+	Mat prev_desc_surf, desc_surf;
+	Mat flow, human_mask;
 
 	Mat image, prev_grey, grey;
 
 	std::vector<float> fscales(0);
 	std::vector<Size> sizes(0);
 
-	std::vector<Mat> prev_grey_pyr(0), grey_pyr(0), flow_pyr(0);
-	std::vector<Mat> prev_poly_pyr(0), poly_pyr(0); // for optical flow
+	std::vector<Mat> prev_grey_pyr(0), grey_pyr(0), flow_pyr(0), flow_warp_pyr(0);
+	std::vector<Mat> prev_poly_pyr(0), poly_pyr(0), poly_warp_pyr(0);
 
 	std::vector<std::list<Track> > xyScaleTracks;
 	int init_counter = 0; // indicate when to detect new feature points
@@ -55,15 +72,10 @@ int main(int argc, char** argv)
 		Mat frame;
 		int i, j, c;
 
-		// get a new frame and resize it by 0.25
+		// get a new frame
 		capture >> frame;
 		if(frame.empty())
 			break;
-                
-                // resize video frame by 0.25
-		cv::resize(frame, frame, Size(), 0.25, 0.25);
-
-
 
 		if(frame_num < start_frame || frame_num > end_frame) {
 			frame_num++;
@@ -79,10 +91,12 @@ int main(int argc, char** argv)
 
 			BuildPry(sizes, CV_8UC1, prev_grey_pyr);
 			BuildPry(sizes, CV_8UC1, grey_pyr);
-
 			BuildPry(sizes, CV_32FC2, flow_pyr);
+			BuildPry(sizes, CV_32FC2, flow_warp_pyr);
+
 			BuildPry(sizes, CV_32FC(5), prev_poly_pyr);
 			BuildPry(sizes, CV_32FC(5), poly_pyr);
+			BuildPry(sizes, CV_32FC(5), poly_warp_pyr);
 
 			xyScaleTracks.resize(scale_num);
 
@@ -108,6 +122,13 @@ int main(int argc, char** argv)
 			// compute polynomial expansion
 			my::FarnebackPolyExpPyr(prev_grey, prev_poly_pyr, fscales, 7, 1.5);
 
+			human_mask = Mat::ones(frame.size(), CV_8UC1);
+			if(bb_file)
+				InitMaskWithBox(human_mask, bb_list[frame_num].BBs);
+
+			detector_surf.detect(prev_grey, prev_kpts_surf, human_mask);
+			extractor_surf.compute(prev_grey, prev_kpts_surf, prev_desc_surf);
+
 			frame_num++;
 			continue;
 		}
@@ -116,9 +137,35 @@ int main(int argc, char** argv)
 		frame.copyTo(image);
 		cvtColor(image, grey, CV_BGR2GRAY);
 
+		// match surf features
+		if(bb_file)
+			InitMaskWithBox(human_mask, bb_list[frame_num].BBs);
+		detector_surf.detect(grey, kpts_surf, human_mask);
+		extractor_surf.compute(grey, kpts_surf, desc_surf);
+		ComputeMatch(prev_kpts_surf, kpts_surf, prev_desc_surf, desc_surf, prev_pts_surf, pts_surf);
+
 		// compute optical flow for all scales once
 		my::FarnebackPolyExpPyr(grey, poly_pyr, fscales, 7, 1.5);
 		my::calcOpticalFlowFarneback(prev_poly_pyr, poly_pyr, flow_pyr, 10, 2);
+
+		MatchFromFlow(prev_grey, flow_pyr[0], prev_pts_flow, pts_flow, human_mask);
+		MergeMatch(prev_pts_flow, pts_flow, prev_pts_surf, pts_surf, prev_pts_all, pts_all);
+
+		Mat H = Mat::eye(3, 3, CV_64FC1);
+		if(pts_all.size() > 50) {
+			std::vector<unsigned char> match_mask;
+			Mat temp = findHomography(prev_pts_all, pts_all, RANSAC, 1, match_mask);
+			if(countNonZero(Mat(match_mask)) > 25)
+				H = temp;
+		}
+
+		Mat H_inv = H.inv();
+		Mat grey_warp = Mat::zeros(grey.size(), CV_8UC1);
+		MyWarpPerspective(prev_grey, grey, grey_warp, H_inv); // warp the second frame
+
+		// compute optical flow for all scales once
+		my::FarnebackPolyExpPyr(grey_warp, poly_warp_pyr, fscales, 7, 1.5);
+		my::calcOpticalFlowFarneback(prev_poly_pyr, poly_warp_pyr, flow_warp_pyr, 10, 2);
 
 		for(int iScale = 0; iScale < scale_num; iScale++) {
 			if(iScale == 0)
@@ -134,11 +181,11 @@ int main(int argc, char** argv)
 			HogComp(prev_grey_pyr[iScale], hogMat->desc, hogInfo);
 
 			DescMat* hofMat = InitDescMat(height+1, width+1, hofInfo.nBins);
-			HofComp(flow_pyr[iScale], hofMat->desc, hofInfo);
+			HofComp(flow_warp_pyr[iScale], hofMat->desc, hofInfo);
 
 			DescMat* mbhMatX = InitDescMat(height+1, width+1, mbhInfo.nBins);
 			DescMat* mbhMatY = InitDescMat(height+1, width+1, mbhInfo.nBins);
-			MbhComp(flow_pyr[iScale], mbhMatX->desc, mbhMatY->desc, mbhInfo);
+			MbhComp(flow_warp_pyr[iScale], mbhMatX->desc, mbhMatY->desc, mbhInfo);
 
 			// track feature points in each scale separately
 			std::list<Track>& tracks = xyScaleTracks[iScale];
@@ -156,6 +203,9 @@ int main(int argc, char** argv)
 					iTrack = tracks.erase(iTrack);
 					continue;
 				}
+
+				iTrack->disp[index].x = flow_warp_pyr[iScale].ptr<float>(y)[2*x];
+				iTrack->disp[index].y = flow_warp_pyr[iScale].ptr<float>(y)[2*x+1];
 
 				// get the descriptors for the feature point
 				RectInfo rect;
@@ -175,27 +225,30 @@ int main(int argc, char** argv)
 					std::vector<Point2f> trajectory(trackInfo.length+1);
 					for(int i = 0; i <= trackInfo.length; ++i)
 						trajectory[i] = iTrack->point[i]*fscales[iScale];
-					
-					if(show_track == 0) {
-						float mean_x(0), mean_y(0), var_x(0), var_y(0), length(0);
-						if(IsValid(trajectory, mean_x, mean_y, var_x, var_y, length)) {
-							printf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t", frame_num, mean_x, mean_y, var_x, var_y, length, fscales[iScale]);
+				
+					std::vector<Point2f> displacement(trackInfo.length);
+					for (int i = 0; i < trackInfo.length; ++i)
+						displacement[i] = iTrack->disp[i]*fscales[iScale];
+	
+					float mean_x(0), mean_y(0), var_x(0), var_y(0), length(0);
+					if(IsValid(trajectory, mean_x, mean_y, var_x, var_y, length) && IsCameraMotion(displacement)) {
+						// output the trajectory
+						printf("%d\t%f\t%f\t%f\t%f\t%f\t%f\t", frame_num, mean_x, mean_y, var_x, var_y, length, fscales[iScale]);
 
-							// for spatio-temporal pyramid
-							printf("%f\t", std::min<float>(std::max<float>(mean_x/float(seqInfo.width), 0), 0.999));
-							printf("%f\t", std::min<float>(std::max<float>(mean_y/float(seqInfo.height), 0), 0.999));
-							printf("%f\t", std::min<float>(std::max<float>((frame_num - trackInfo.length/2.0 - start_frame)/float(seqInfo.length), 0), 0.999));
-						
-							// output the trajectory
-							for (int i = 0; i < trackInfo.length; ++i)
-								printf("%f\t%f\t", trajectory[i].x,trajectory[i].y);
-			
-							PrintDesc(iTrack->hog, hogInfo, trackInfo);
-							PrintDesc(iTrack->hof, hofInfo, trackInfo);
-							PrintDesc(iTrack->mbhX, mbhInfo, trackInfo);
-							PrintDesc(iTrack->mbhY, mbhInfo, trackInfo);
-							printf("\n");
-						}
+						// for spatio-temporal pyramid
+						printf("%f\t", std::min<float>(std::max<float>(mean_x/float(seqInfo.width), 0), 0.999));
+						printf("%f\t", std::min<float>(std::max<float>(mean_y/float(seqInfo.height), 0), 0.999));
+						printf("%f\t", std::min<float>(std::max<float>((frame_num - trackInfo.length/2.0 - start_frame)/float(seqInfo.length), 0), 0.999));
+					
+						// output the trajectory
+						for (int i = 0; i < trackInfo.length; ++i)
+							printf("%f\t%f\t", displacement[i].x, displacement[i].y);
+		
+						PrintDesc(iTrack->hog, hogInfo, trackInfo);
+						PrintDesc(iTrack->hof, hofInfo, trackInfo);
+						PrintDesc(iTrack->mbhX, mbhInfo, trackInfo);
+						PrintDesc(iTrack->mbhY, mbhInfo, trackInfo);
+						printf("\n");
 					}
 
 					iTrack = tracks.erase(iTrack);
@@ -211,7 +264,7 @@ int main(int argc, char** argv)
 			if(init_counter != trackInfo.gap)
 				continue;
 
-			// detect new feature points every initGap frames
+			// detect new feature points every gap frames
 			std::vector<Point2f> points(0);
 			for(std::list<Track>::iterator iTrack = tracks.begin(); iTrack != tracks.end(); iTrack++)
 				points.push_back(iTrack->point[iTrack->index]);
@@ -229,17 +282,20 @@ int main(int argc, char** argv)
 			poly_pyr[i].copyTo(prev_poly_pyr[i]);
 		}
 
+		prev_kpts_surf = kpts_surf;
+		desc_surf.copyTo(prev_desc_surf);
+
 		frame_num++;
 
 		if( show_track == 1 ) {
-			cv::imshow( "DenseTrack", image);
-			cv::waitKey(10);
+			imshow( "DenseTrackStab", image);
+			c = cvWaitKey(3);
 			if((char)c == 27) break;
 		}
 	}
 
 	if( show_track == 1 )
-		destroyWindow("DenseTrack");
+		destroyWindow("DenseTrackStab");
 
 	return 0;
 }

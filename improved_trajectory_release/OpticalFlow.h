@@ -1,7 +1,7 @@
 #ifndef OPTICALFLOW_H_
 #define OPTICALFLOW_H_
 
-#include "DenseTrack.h"
+#include "DenseTrackStab.h"
 
 #include <time.h>
 

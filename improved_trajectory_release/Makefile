@@ -1,5 +1,5 @@
 # set the binaries that have to be built
-TARGETS := DenseTrack Video
+TARGETS := DenseTrackStab Video
 
 # set the build configuration set 
 BUILD := release
@@ -12,7 +12,7 @@ BINDIR := $(BUILD)
 # libraries 
 LDLIBS = $(addprefix -l, $(LIBS) $(LIBS_$(notdir $*)))
 LIBS := \
-	opencv_core opencv_highgui opencv_video opencv_imgproc \
+	opencv_core opencv_highgui opencv_video opencv_imgproc opencv_calib3d opencv_features2d opencv_nonfree \
 	avformat avutil avcodec swscale
 
 # set some flags and compiler/linker specific commands

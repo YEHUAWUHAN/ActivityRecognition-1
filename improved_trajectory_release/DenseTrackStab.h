@@ -1,5 +1,5 @@
-#ifndef DENSETRACK_H_
-#define DENSETRACK_H_
+#ifndef DENSETRACKSTAB_H_
+#define DENSETRACKSTAB_H_
 
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
@@ -16,12 +16,20 @@
 #include <list>
 #include <string>
 
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core/core.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
+
 using namespace cv;
 
 int start_frame = 0;
 int end_frame = INT_MAX;
 int scale_num = 8;
 const float scale_stride = sqrt(2);
+char* bb_file = NULL;
 
 // parameters for descriptors
 int patch_size = 32;
@@ -82,6 +90,7 @@ class Track
 {
 public:
     std::vector<Point2f> point;
+    std::vector<Point2f> disp;
     std::vector<float> hog;
     std::vector<float> hof;
     std::vector<float> mbhX;
@@ -90,7 +99,7 @@ public:
 
     Track(const Point2f& point_, const TrackInfo& trackInfo, const DescInfo& hogInfo,
           const DescInfo& hofInfo, const DescInfo& mbhInfo)
-        : point(trackInfo.length+1), hog(hogInfo.dim*trackInfo.length),
+        : point(trackInfo.length+1), disp(trackInfo.length), hog(hogInfo.dim*trackInfo.length),
           hof(hofInfo.dim*trackInfo.length), mbhX(mbhInfo.dim*trackInfo.length), mbhY(mbhInfo.dim*trackInfo.length)
     {
         index = 0;
@@ -104,4 +113,34 @@ public:
     }
 };
 
-#endif /*DENSETRACK_H_*/
+class BoundBox
+{
+public:
+	Point2f TopLeft;
+	Point2f BottomRight;
+	float confidence;
+
+	BoundBox(float a1, float a2, float a3, float a4, float a5)
+	{
+		TopLeft.x = a1;
+		TopLeft.y = a2;
+		BottomRight.x = a3;
+		BottomRight.y = a4;
+		confidence = a5;
+	}
+};
+
+class Frame
+{
+public:
+	int frameID;
+	std::vector<BoundBox> BBs;
+	
+	Frame(const int& frame_)
+	{
+		frameID = frame_;
+		BBs.clear();
+	}
+};
+
+#endif /*DENSETRACKSTAB_H_*/
