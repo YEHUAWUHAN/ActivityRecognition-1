@@ -63,17 +63,19 @@ while hasFrame(vv)
 
     if mod(idxf,S)==0
 
-        if idxc <= TTT
-            b = labels_p_normalized_a(idxc,:);
-        else
-            b = labels_p_normalized_b(idxc,:);
-        end
+%         if idxc <= TTT
+%             b = labels_p_normalized_a(idxc,:);
+%         else
+%             b = labels_p_normalized_b(idxc,:);
+%         end
+        b = max([labels_p_a(idxc,:);labels_p_b(idxc,:)]);
+        b = b/sum(b);
 %         
-        if idxc > 2000 
-            T = eye(10);
-        else
-            T = ones(10,10);
-        end
+%         if idxc > 2000 
+%             T = eye(10);
+%         else
+%             T = ones(10,10);
+%         end
         idxc = idxc+1;
         
         A = b.*(A*T);
@@ -144,5 +146,5 @@ ylim([0 1]);
 xlabel('Number of Snippets','FontSize',20);
 ylabel('Recognition Rate','FontSize',20);
 title('RochesterADL','FontSize',20);
-
+save('radl_mix.mat','reg_res_curve');
 

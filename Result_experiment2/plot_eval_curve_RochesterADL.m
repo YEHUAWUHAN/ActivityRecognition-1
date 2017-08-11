@@ -139,7 +139,7 @@ Aint = A;
 labelst = find(cellfun(@(x) strcmp(x,test_labels{jj}.label), act_list, 'UniformOutput', 1));
 
 % TT = 0.85*nn_snippets;
-TT = 10000;
+TT = 1000000;
 while hasFrame(vv)
     if idxc > size(labels_p,1)
         break;
@@ -239,7 +239,7 @@ for cc = 1:max_length
     reg_res_curveb = [reg_res_curveb; sum(Ytp(:)==Yt(:))/length(Yt(:))];
 end
 
-obj = load('RochesterADL_mix');
+obj = load('radl_mix');
 figure;set(gcf,'Color','white');
 plot(1:max_length, reg_res_curve,'-','LineWidth',5);hold on;
 plot(1:max_length, reg_res_curveb,'--','LineWidth',5);hold on;
