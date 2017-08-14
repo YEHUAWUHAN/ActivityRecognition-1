@@ -12,14 +12,19 @@ switch dataset
         option.features.stip.type = 'iDT';
         option.features.stip.scales = 2.^(0:0.5:2.5); % can be automatically determined
         option.features.stip.feature_type_list = {'var','mbh'}; % var,traj,hog,hof,mbh
+    case 'HMDB51'
+        option.features.stip.type = 'iDT';
+        option.features.stip.scales = 2.^(0:0.5:2.5); % can be automatically determined
+        option.features.stip.feature_type_list = {'var','mbh'}; % var,traj,hog,hof,mbh
     otherwise
         error('no other dataset considered so far.');
         return;
 end
+option.features.whitening_dim = 0.5; % if >1, =target_dim; else ratio of dimension to preserve.
 option.features.time_window = 30; % successive frames wrt.subsampling
 option.features.stride = 30; % sliding time window by this stride
-option.features.standardization = 0; % 1 for kmeans
-option.voting.excluding_empty_detection = true;
+option.features.whitening = 0; % 1 for kmeans
+% option.voting.excluding_empty_detection = true;
 
 % 'batch':one feature per video; 
 % 'accumulated':features accumulated over each snippets
@@ -58,12 +63,11 @@ switch dataset
         option.fileIO.stip_file_version = '2.0'; 
     case 'HMDB51'
         dataset_path = option.fileIO.dataset_path;
-        split_path = [dataset_path '/testTrainMulti_7030_splits'];
+        option.fileIO.split_path = [dataset_path '/testTrainMulti_7030_splits'];
         aa = dir(dataset_path);
         act_list = arrayfun( @(x) x.name, aa(3:end),'UniformOutput',false );
         act_list(strcmp(act_list,'testTrainMulti_7030_splits'))=[];
-        act_list(strcmp(act_list,'uncompress.sh'))=[];
-        option.fileIO.stip_file_version = '1.0'; 
+        act_list(strcmp(act_list,'DT_features'))=[];
     otherwise
         error('no other datasets so far...');
 end

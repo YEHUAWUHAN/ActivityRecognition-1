@@ -124,7 +124,7 @@ Xt = Xt(idx_sort,:);
 
 %%% feature PCA dimension reduction
 target_dim = option.svm.pca_whitening_target_dim;
-[Xs,Xt] = pca_dr(Xs,Xt, target_dim);
+[Xs,Xt] = V3_pca_dr(Xs,Xt, target_dim,'reduce');
 
 %%% classification
 fprintf('-- training and testing \n');
@@ -165,27 +165,6 @@ fprintf('-- recognition rate = %f\n',acc_rate);
 end
 
 
-function [Xs, Xt] = pca_dr(Xs,Xt,target_dim)
-
-[U,Xs,~,~,~,Xs_mean] = pca(Xs,'NumComponents',target_dim, 'Centered','on');
-Xt = (Xt-repmat(Xs_mean,size(Xt,1),1))*U;
-
-
-
-% %%% mean and cov computation
-% Xs_mean = mean(Xs);
-% Xs_cov = cov(Xs);
-% 
-% %%% eigen-decomposition
-% [U_all,D_all] = eig(Xs_cov);
-% U = U_all(:,1:target_dim);
-% D = D_all(1:target_dim,1:target_dim);
-% 
-% %%% whitening
-% Xs = (Xs-repmat(Xs_mean,size(Xs,1),1))*U * D.^(-0.5);
-% Xt = (Xt-repmat(Xs_mean,size(Xt,1),1))*U * D.^(-0.5);
-
-end
 
 
 

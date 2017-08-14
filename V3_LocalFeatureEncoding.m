@@ -102,11 +102,12 @@ for ss = 1:length(scales)
         gmm_covar = eval_res.CodebookLearning{ss}.gmm_covar;
         gmm_prior = eval_res.CodebookLearning{ss}.gmm_prior;
         mu = eval_res.CodebookLearning{ss}.RawFeatureStandardization.mu;
-        sigma = eval_res.CodebookLearning{ss}.RawFeatureStandardization.sigma;
-
-        %%% standardization
+        D = eval_res.CodebookLearning{ss}.RawFeatureStandardization.D;
+        U = eval_res.CodebookLearning{ss}.RawFeatureStandardization.U;
+        
+        %%% whitening
         src_onescale = (src_onescale-repmat(mu,size(src_onescale,1),1))...
-            ./repmat(sigma,size(src_onescale,1),1);
+            *U*D;
 
         %%% fisher vector encoding
         des_temp = vl_fisher(src_onescale',gmm_means, gmm_covar, gmm_prior, 'Improved');

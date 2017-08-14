@@ -1,4 +1,4 @@
-function [gmm_means, gmm_covar, gmm_priors,mu,sigma] = V3_CreateCodebook(stip_data,option,scale)
+function [gmm_means, gmm_covar, gmm_priors,mu,D,U] = V3_CreateCodebook(stip_data,option,scale)
 %%% This function creates the vocabulary for LEAVE-ONE-SUBJECT-OUT, the leaved subject is passed in the argument.
 %%% This function returns a matrix, whose rows denote vocabularies and columns denote features.
 %%% V1.0.1 In this version, the dataset and subject arguments are only for
@@ -30,17 +30,28 @@ if size(features,1)>N
    features = features(kk(1:N),:);
 end
 
+
 fprintf('-- n_samples=%d..\n',size(features,1));
-%%% data standardization
-if option.features.standardization
-    mu = mean(features,1);
-    sigma = std(features,1);
+%%% data whitening
+if option.features.whitening_dim > 1
+    target_dim = option.features.whitening_dim;
 else
-    mu = zeros(1,size(features,2));
-    sigma = ones(1,size(features,2));
+    target_dim = size(features,2)*option.features.whitening_dim;
 end
-features = (features-repmat(mu,size(features,1),1))...
-    ./repmat(sigma+1e-6,size(features,1),1);
+
+if option.features.whitening
+%     mu = mean(features,1);
+%     sigma = std(features,1);
+    [U,features,lambda,~,~,mu] = pca(features,'NumComponents',option.target_dim, 'Centered','on');
+    D = diag(lambda.^(-0.5));
+    features = features*D;
+%     Xt = (Xt-repmat(Xs_mean,size(Xt,1),1))*U*D;
+else
+    U = eye(size(features,2),size(features,2));
+    D = eye(size(features,2),size(features,2));
+end
+% features = (features-repmat(mu,size(features,1),1))...
+%     ./repmat(sigma+1e-6,size(features,1),1);
 
 %%% learn GMM
 features = features';
