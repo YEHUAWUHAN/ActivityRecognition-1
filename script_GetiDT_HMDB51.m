@@ -15,6 +15,13 @@ for i = 1:N
 end
 N = N-1;
 
+for i = 1:N
+    if strcmp(dirinfo(i).name, 'DT_features')
+        dirinfo(i) = [];
+        break;
+    end
+end
+N = N-1;
 
 %% extract improved dense trajectory and its features
 for K = 1 : length(dirinfo)
@@ -22,13 +29,25 @@ for K = 1 : length(dirinfo)
   subdirinfo = dir(fullfile([dataset_path,thisdir], '/*.avi'));
   for j = 1 : length(subdirinfo)
       filename = subdirinfo(j).name;
-      filepath = subdirinfo(j).folder;
+      if sum(filename=='(' | filename==')' | filename=='&' | filename==';') >0 
+          filepath = [dataset_path,thisdir];
+          filename_input = strrep(filename,'(','\(');
+          filename_input = strrep(filename_input,')','\)');
+          filename_input = strrep(filename_input,'&','\&');
+          filename_input = strrep(filename_input,';','";"');
+      else 
+          filename_input = filename;
+      end
       command_bin = './improved_trajectory_release/release/DenseTrackStab ';
-      command_input = [filepath,'/',filename];
+      command_input = [filepath,'/',filename_input];
       command_output = [dataset_path,'iDT_',filename,'.txt'];
-      command = [command_bin command_input '>' command_output];
+      command = [command_bin command_input];
       fprintf('run command: %s\n',command);
-      system(command);
+      [status,cmdout] = system(command);
+      fid = fopen(command_output,'wt');
+      fprintf(fid,cmdout);
+      fclose(fid);
+      end
   end
 end
 

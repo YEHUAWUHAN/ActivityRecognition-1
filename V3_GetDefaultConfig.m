@@ -68,6 +68,8 @@ switch dataset
         act_list = arrayfun( @(x) x.name, aa(3:end),'UniformOutput',false );
         act_list(strcmp(act_list,'testTrainMulti_7030_splits'))=[];
         act_list(strcmp(act_list,'DT_features'))=[];
+        option.fileIO.readingmode = 'global_random'; % or 'mini_batch'
+        option.fileIO.batch_size_per_class = 8; % num of videos, no larger than 10
     otherwise
         error('no other datasets so far...');
 end

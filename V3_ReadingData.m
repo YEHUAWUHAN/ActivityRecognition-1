@@ -29,7 +29,9 @@ switch option.fileIO.dataset_name
     case 'HMDB51'
         %%% read data from file
         %%% generate file-to-label lookup table
+        
         feature_data = {};
+        dataset_path = option.fileIO.dataset_path; 
         dirinfo = dir(option.fileIO.dataset_path);
         dirinfo = dirinfo(3:end); % remove . and ..
         N = length(dirinfo);
@@ -46,21 +48,24 @@ switch option.fileIO.dataset_name
                 break;
             end
         end
-        
-        
+
+        % 
         for K = 1 : length(dirinfo)
             thisdir = dirinfo(K).name;
-            subdirinfo = dir(fullfile([dataset_path,thisdir], '/*.avi'));
+%             subdirinfo = dir(fullfile([option.fileIO.dataset_path,thisdir], '/*.avi'));
+            subdirinfo = dir([dataset_path,'/',thisdir, '/*.avi']);
             label = K;
             for ii = 1 : length(subdirinfo)
                 filename = subdirinfo(ii).name;             
-                fprintf('-- read features: %f\n',filename);
-                feature_filename = [dataset_path,'DT_features/iDT_',filename,'.txt'];
+                fprintf('-- read features: %s\n',filename);
+                feature_filename = [dataset_path,'/DT_features/iDT_',filename,'.txt'];
                 feature_data{ii}.video = filename; % with .avi without .txt
                 feature_data{ii}.feature = importdata(feature_filename);
                 feature_data{ii}.label = label;  
             end
         end
+            
+       
     
     case 'UCF101'
         feature_data = {};

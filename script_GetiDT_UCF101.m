@@ -22,13 +22,16 @@ for K = 1 : length(dirinfo)
   subdirinfo = dir(fullfile([dataset_path,thisdir], '/*.avi'));
   for j = 1 : length(subdirinfo)
       filename = subdirinfo(j).name;
-      filepath = subdirinfo(j).folder;
+      filepath = [dataset_path,thisdir];
       command_bin = './improved_trajectory_release/release/DenseTrackStab ';
       command_input = [filepath,'/',filename];
       command_output = [dataset_path,'iDT_',filename,'.txt'];
-      command = [command_bin command_input '>' command_output];
+      command = [command_bin command_input];
       fprintf('run command: %s\n',command);
-      system(command);
+      [status,cmdout]=system(command);
+      fid = fopen(command_output,'wt');
+      fprintf(fid,cmdout);
+      fclose(fid);
   end
 end
 
